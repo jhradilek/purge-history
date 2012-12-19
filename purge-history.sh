@@ -35,6 +35,24 @@ function display_error {
   exit $exit_status
 }
 
+# A function that displays a list of files with all their predecessors.
+#
+# Usage: find_predecessors [<file_name>...]
+function find_predecessors {
+  # Declare required variables:
+  local file
+  local result
+
+  # Process given file names:
+  for file in "$@"; do
+    # Look up all predecessors of the given file and add them to the list:
+    result+=$(git log --pretty=format: --name-only --follow -- "$file" | sort -u)
+  done
+
+  # Display the result:
+  echo "$result" | sed -e '/^$/d'
+}
+
 # Process command line options:
 while getopts ":hv" OPTION; do
   case $OPTION in
