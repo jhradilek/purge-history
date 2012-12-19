@@ -53,6 +53,24 @@ function find_predecessors {
   echo "$result" | sed -e '/^$/d'
 }
 
+# A function that displays the complement of a list of  all files that were
+# ever tracked after subtracting supplied files and all their predecessors.
+#
+# Usage: find_complement [<file_name>...]
+function find_complement {
+  # Look up all files that were ever tracked:
+  local all=$(git log --pretty=format: --name-only | sort -u | sed -e '/^$/d')
+
+  # Retrieve a list of files to preserve and find their predecessors:
+  local protected=$(find_predecessors "$@")
+
+  # Subtract protected files from the list of tracked files:
+  local result=$(echo $all $protected | tr ' ' '\n' | sort | uniq -u)
+
+  # Display the result:
+  echo -e "$result"
+}
+
 # Process command line options:
 while getopts ":hv" OPTION; do
   case $OPTION in
