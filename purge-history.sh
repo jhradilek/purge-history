@@ -21,6 +21,7 @@ VERSION='1.0.0'
 
 # Default options:
 OPT_BRANCH='HEAD'
+OPT_KEEP_ONLY=0
 
 # A function that displays an error message, and immediately terminates the
 # script.
@@ -98,14 +99,29 @@ function remove_files {
 }
 
 # Process command line options:
-while getopts ":hv" OPTION; do
-  case $OPTION in
+while getopts ":b:ohv" OPTION; do
+  case "$OPTION" in
+    b)
+      # Change the branch to rewrite:
+      if test "$OPTARG" = "ALL"; then
+        OPT_BRANCH='--all'
+      else
+        OPT_BRANCH="$OPTARG"
+      fi
+      ;;
+    o)
+      # Invert the default behavior and tell the script to remove all files
+      # except those explicitly specified on the command line:
+      OPT_KEEP_ONLY=1
+      ;;
     h)
       # Display usage information:
-      echo "Usage: $NAME [OPTION...]"
+      echo "Usage: $NAME [-o] [-b <branch>] <file_name>..."
       echo
-      echo "  -h              display this help and exit"
-      echo "  -v              display version information and exit"
+      echo '  -b <branch>     rewrite the selected branch'
+      echo '  -o              keep only the selected files'
+      echo '  -h              display this help and exit'
+      echo '  -v              display version information and exit'
 
       # Terminate the script:
       exit 0
@@ -137,6 +153,15 @@ fi
 if ! git status >/dev/null 2>&1; then
   # Report an error and terminate the script:
   display_error "Not a git repository." 2
+fi
+
+# Determine which action to perform:
+if test "$OPT_KEEP_ONLY" -ne 1; then
+  # Remove selected files and their predecessors:
+  remove_files "$(find_predecessors $@)"
+else
+  # Remove all but selected files and their predecessors:
+  remove_files "$(find_complement $@)"
 fi
 
 # Terminate the script:
