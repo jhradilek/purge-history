@@ -17,11 +17,12 @@
 
 # General script information:
 NAME=${0##*/}
-VERSION='1.0.0'
+VERSION='1.0.1'
 
 # Default options:
 OPT_BRANCH='HEAD'
 OPT_KEEP_ONLY=0
+OPT_PURGE_MERGES=0
 
 # A function that displays an error message, and immediately terminates the
 # script.
@@ -91,10 +92,6 @@ function remove_files {
   # Rewrite the revision history:
   git filter-branch --force --prune-empty --tag-name-filter cat --index-filter "cat $file_list | xargs -r git rm --cached --ignore-unmatch" -- $OPT_BRANCH
 
-  # Remove merge commits that are no longer needed;  strongly  inspired by:
-  # http://comments.gmane.org/gmane.comp.version-control.git/192663
-  git filter-branch --force --prune-empty --tag-name-filter cat --parent-filter 'read commit; test -z "$commit" || git show-branch --independent `echo -n "$commit" | sed -e "s/-p / /g"` | sed -e "s/.*/-p &/" | tr "\n" " "; echo' -- $OPT_BRANCH
-
   # Remove the temporary file:
   rm -f "$file_list"
 
@@ -102,8 +99,18 @@ function remove_files {
   trap - INT TERM
 }
 
+# A function that removes merge commits that are no longer needed.
+#
+# Usage: remove_merge_commits
+function remove_merge_commits {
+  # Identify and remove all merge commits that are no longer needed. Please
+  # note that this algorithm is strongly inspired by the following comment:
+  # http://comments.gmane.org/gmane.comp.version-control.git/192663
+  git filter-branch --force --prune-empty --tag-name-filter cat --parent-filter 'read commit; test -z "$commit" || git show-branch --independent `echo -n "$commit" | sed -e "s/-p / /g"` | sed -e "s/.*/-p &/" | tr "\n" " "; echo' -- $OPT_BRANCH
+}
+
 # Process command line options:
-while getopts ":b:ohv" OPTION; do
+while getopts ":b:mohv" OPTION; do
   case "$OPTION" in
     b)
       # Change the branch to rewrite:
@@ -113,6 +120,10 @@ while getopts ":b:ohv" OPTION; do
         OPT_BRANCH="$OPTARG"
       fi
       ;;
+    m)
+      # Enable removal of empty merge commits:
+      OPT_PURGE_MERGES=1
+      ;;
     o)
       # Invert the default behavior and tell the script to remove all files
       # except those explicitly specified on the command line:
@@ -120,9 +131,10 @@ while getopts ":b:ohv" OPTION; do
       ;;
     h)
       # Display usage information:
-      echo "Usage: $NAME [-o] [-b <branch>] <file_name>..."
+      echo "Usage: $NAME [-mo] [-b <branch>] <file_name>..."
       echo
       echo '  -b <branch>     rewrite the selected branch'
+      echo '  -m              delete empty merge commits'
       echo '  -o              keep only the selected files'
       echo '  -h              display this help and exit'
       echo '  -v              display version information and exit'
@@ -166,6 +178,11 @@ if test "$OPT_KEEP_ONLY" -ne 1; then
 else
   # Remove all but selected files and their predecessors:
   remove_files "$(find_complement $@)"
+fi
+
+# Determine whether to remove empty merge commits:
+if test "$OPT_PURGE_MERGES" -eq 1; then
+  remove_merge_commits
 fi
 
 # Terminate the script:
