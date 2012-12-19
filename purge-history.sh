@@ -107,5 +107,11 @@ if test "$#" -eq 0; then
   display_error "Invalid number of arguments." 22
 fi
 
+# Verify that the user is in a git repository:
+if ! git status >/dev/null 2>&1; then
+  # Report an error and terminate the script:
+  display_error "Not a git repository." 2
+fi
+
 # Terminate the script:
 exit 0
