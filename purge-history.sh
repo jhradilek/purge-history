@@ -91,6 +91,10 @@ function remove_files {
   # Rewrite the revision history:
   git filter-branch --force --prune-empty --tag-name-filter cat --index-filter "cat $file_list | xargs -r git rm --cached --ignore-unmatch" -- $OPT_BRANCH
 
+  # Remove merge commits that are no longer needed;  strongly  inspired by:
+  # http://comments.gmane.org/gmane.comp.version-control.git/192663
+  git filter-branch --force --prune-empty --tag-name-filter cat --parent-filter 'read commit; test -z "$commit" || git show-branch --independent `echo -n "$commit" | sed -e "s/-p / /g"` | sed -e "s/.*/-p &/" | tr "\n" " "; echo' -- $OPT_BRANCH
+
   # Remove the temporary file:
   rm -f "$file_list"
 
