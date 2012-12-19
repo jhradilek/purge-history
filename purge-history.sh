@@ -19,6 +19,9 @@
 NAME=${0##*/}
 VERSION='1.0.0'
 
+# Default options:
+OPT_BRANCH='HEAD'
+
 # A function that displays an error message, and immediately terminates the
 # script.
 #
@@ -69,6 +72,29 @@ function find_complement {
 
   # Display the result:
   echo -e "$result"
+}
+
+# A function that removes selected files from every commit.
+#
+# Usage: remove_files <file_name>...
+function remove_files {
+  # Create a temporary file for the file list:
+  local file_list=$(mktemp --tmpdir 'git-purge-history.XXXXXX')
+
+  # Set up the signal handler:
+  trap "rm -f '$file_list'; exit $?" INT TERM
+
+  # Write the file list to the temporary file:
+  echo "$@" > "$file_list"
+
+  # Rewrite the revision history:
+  git filter-branch --force --prune-empty --tag-name-filter cat --index-filter "cat $file_list | xargs -r git rm --cached --ignore-unmatch" -- $OPT_BRANCH
+
+  # Remove the temporary file:
+  rm -f "$file_list"
+
+  # Reset the signal handler:
+  trap - INT TERM
 }
 
 # Process command line options:
