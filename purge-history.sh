@@ -51,7 +51,7 @@ function find_predecessors {
   # Process given file names:
   for file in "$@"; do
     # Look up all predecessors of the given file and add them to the list:
-    result+=$(git log --pretty=format: --name-only --follow -- "$file" | sort -u)
+    result+=$(git log --pretty=format: --name-only --follow $OPT_BRANCH -- "$file" | sort -u)
   done
 
   # Display the result:
