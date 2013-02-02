@@ -33,7 +33,7 @@ function display_error {
   local error_message=${1:-'An unexpected error has occurred.'}
   local exit_status=${2:-1}
 
-  # Write the error message to standard output:
+  # Write the error message to standard error:
   echo -e "$NAME: $error_message" >&2
 
   # Terminate the script with the selected exit status:
